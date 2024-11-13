@@ -28,7 +28,7 @@ int main(void) {
         fp_write = fopen(dizionario, "w");
         if (!fp_write) printf("Errore durante la creazione del file\n");
     } else {
-        printf("File caricato correttamente\n");
+        printf("\nFile caricato correttamente\n\n");
     }
 
     //Carico dizionario dal file seguendo lo schema nel readme
@@ -41,11 +41,12 @@ int main(void) {
         }
     }
     fclose(fp_read);
-
+    //Reinizializzare se no non genera numeri casuali a quanto pare
     srand(time(NULL));
 
     printf("\nCiau, qui ti spiego le regole: \n");
-    printf("Per fermare il giuoco scrivi -1\n");
+    printf("Per fermare il giuoco scrivi -1 quando ti chiede quanto fa\n");
+    printf("Be fast af\n\n");
     printf("\n");
 
     while (risposta != -1){
@@ -136,6 +137,9 @@ int verifica(float totale){
     }
     if(totale==risposta){
         printf("Ottimo! Ci hai messo %d secondi\n", (int)elapsedTime);
+        return risposta;
+    } else if (risposta == -1){
+        printf("Alla prossima!\n");
         return risposta;
     } else {
         printf("Nu :( la risposta era %.2f\n", totale);
