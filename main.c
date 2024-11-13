@@ -1,38 +1,61 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 
 #define MaxChar 20
 #define MaxProd 5 //Massimo numero di elementi nel singolo ordine
 #define NumProd 6 //Numero di elementi nell'inventario
-
+#define dizionario "../listaProdotti.txt"
+#define Max_Line_lenght 50
 
 typedef struct {
     char nomeProdotto[MaxChar];
     float prezzo;
 } prodotto;
+FILE *fp_read; FILE *fp_write;
 
 int generaOrdine();
-float scegliProdotti(int n, prodotto listaProdotti[NumProd]);
-void acquisisciLista(prodotto listaProdotti[NumProd]);
+float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count);
+int acquisisciLista(FILE *fp_read, prodotto **listaProdotti);
 int verifica(float totale);
 
 int main(void) {
-    srand(time(NULL));
     int n, risposta = 0;
     float totale;
-    prodotto listaProdotti[NumProd];
-    acquisisciLista(listaProdotti);
-    printf("Ciau, qui ti spiego le regole: \n");
+    fp_read = fopen(dizionario, "r");
+    if(fp_read == NULL){//se il file non c'è si crea
+        fp_write = fopen(dizionario, "w");
+        if (!fp_write) printf("Errore durante la creazione del file\n");
+    } else {
+        printf("File caricato correttamente\n");
+    }
+
+    //Carico dizionario dal file seguendo lo schema nel readme
+    prodotto *listaProdotti = NULL;
+    int count = acquisisciLista(fp_read, &listaProdotti);
+    if (count > 0) {
+        printf("Prodotti letti:\n");
+        for (int i = 0; i < count; i++) {
+            printf("Prodotto: %s, Prezzo: %.2f\n", listaProdotti[i].nomeProdotto, listaProdotti[i].prezzo);
+        }
+    }
+    fclose(fp_read);
+
+    srand(time(NULL));
+
+    printf("\nCiau, qui ti spiego le regole: \n");
     printf("Per fermare il giuoco scrivi -1\n");
     printf("\n");
+
     while (risposta != -1){
-        n = generaOrdine();
+        n = generaOrdine();//N è il numero di elementi dell'ordine da 1 a MAXPROD
         printf("Ordine generato: \n");
-        totale = scegliProdotti(n, listaProdotti);
+        totale = scegliProdotti(n, listaProdotti, count);
         risposta = verifica(totale);
         printf("\n");
     }
+    free(listaProdotti); // libera la memoria allocata
     return 0;
 }
 
@@ -42,10 +65,10 @@ int generaOrdine(){
     return n;
 }
 
-float scegliProdotti(int n, prodotto listaProdotti[NumProd]){
+float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count){
     float totale = 0;
     for(int i = 0; i<n; i++){
-        int prod = rand() % (NumProd -1);
+        int prod = rand() % (count -1);
         //mi genera un numero che sta ad indicare uno dei prodotti della lista
         printf("#%d: %s \n", i+1, listaProdotti[prod].nomeProdotto);
         totale += listaProdotti[prod].prezzo;
@@ -55,18 +78,47 @@ float scegliProdotti(int n, prodotto listaProdotti[NumProd]){
     return totale;
 }
 
-void acquisisciLista(prodotto listaProdotti[NumProd]){
-    prodotto temp[NumProd] = {
-            {"Intero", 8},
-            {"Ridotto", 6},
-            {"Coca-cola", 3.5},
-            {"Goleador", 0.2},
-            {"Chinotto", 3.5},
-            {"Birra", 4.5}
-    };
-    for(int i = 0; i < MaxProd; i++) {
-        listaProdotti[i] = temp[i];
+int acquisisciLista(FILE *fp_read, prodotto **listaProdotti){
+    int inizioDizionario = 0, count = 0;
+    char line[Max_Line_lenght];
+    //inizio a leggere, ma prima devo contare le righe
+    while (fgets(line, sizeof(line), fp_read)){//Finché non legge //fine nel file
+        if(strncmp(line, "//Inizio dizionario", 18) == 0) {
+            inizioDizionario = 1;
+            continue;
+        }
+        if (strncmp(line, "//fine", 5) == 0) {
+            break;
+        }
+        if(inizioDizionario){
+            count +=1;
+        }
+
     }
+    *listaProdotti = malloc(count * sizeof(prodotto));
+    if (*listaProdotti == NULL) {
+        printf("Errore nell'allocazione della memoria.\n");
+        return 0;
+    }
+    //porto indietro il puntatore
+    rewind(fp_read);
+    //reinizializzo le variabili
+    inizioDizionario = 0, count = 0;
+
+    while (fgets(line, sizeof(line), fp_read)){//Finché non legge //fine nel file
+        if(strncmp(line, "//Inizio dizionario", 18)== 0) {
+            inizioDizionario = 1;
+            continue;
+        }
+        if (strncmp(line, "//fine", 6) == 0) {
+            break;
+        }
+        if(inizioDizionario){
+            sscanf(line, "%[^:]:%f", (*listaProdotti)[count].nomeProdotto, &(*listaProdotti)[count].prezzo);
+            count += 1;
+        }
+    }
+    return count;
 }
 
 
