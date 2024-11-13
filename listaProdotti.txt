@@ -1,0 +1,10 @@
+Spiegazioni a caso
+pure qui
+
+//Inizio dizionario
+Intero:8
+Ridotto:6
+Coca-cola:3.5
+Birra media:3.5
+Goleador:0.2
+//fine
