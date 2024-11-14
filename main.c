@@ -8,9 +8,10 @@
 #define MaxProd 5 //Massimo numero di elementi nel singolo ordine
 #define NumProd 6 //Numero di elementi nell'inventario
 #define dizionario "./listaProdotti.txt"
+#define frasiIntro "./frasiIntro.txt"
 #define Max_Line_lenght 50
 /*SEZIONE IDEE
- * Quando si preme i nella risposta viene visualizzato l'inventario, poi di nuovo il prompt in cui si deve inserire la domanda (senza rigenerare l'ordine)
+ * FATTO: Quando si preme i nella risposta viene visualizzato l'inventario, poi di nuovo il prompt in cui si deve inserire la domanda (senza rigenerare l'ordine)
  * Premere invio per iniziare
  * Implementare il resto casuale dal cliente
  * */
@@ -19,23 +20,36 @@ typedef struct {
     char nomeProdotto[MaxChar];
     float prezzo;
 } prodotto;
-FILE *fp_read; FILE *fp_write;
+
+FILE *fp_read; FILE *fp_write; FILE *fp_frasiRead; FILE *fp_frasiWrite;
 
 int generaOrdine();
 float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count);
 int acquisisciLista(FILE *fp_read, prodotto **listaProdotti);
 int verifica(float totale, prodotto listaProdotti[NumProd], int count);
 void stampaInventario(prodotto listaProdotti[NumProd], int count);
+int prendiFrasiIntro(FILE *fp_frasiRead, char ***listaFrasi);
 void clearScreen();
+void parlaIntro(char **listaFrasi, int quanteFrasi);
 
 int main(void) {
-    int n, risposta = 0;
+
+    int n, risposta = 0, quanteFrasi;
     float totale;
+    char temp;
+    prodotto *listaProdotti = NULL;
+    char **listaFrasi = NULL;
+
     fp_read = fopen(dizionario, "r");
-    if(fp_read == NULL){//se il file non c'è si crea
+    fp_frasiRead = fopen(frasiIntro, "r");
+
+    if(fp_read == NULL){       //se il file non c'è si crea
+
         fp_write = fopen(dizionario, "w");
+
         if (!fp_write) {printf("Errore durante la creazione del file\n");}
         else{
+
             //Se non c'è nessun file lo creo e ci stampo queste cose base esempio
             fprintf(fp_write, "Qui sono tutti i prodotti che sono in vendita,\n");
             fprintf(fp_write, "ne puoi aggiungere quanti vuoi ma l'importante è che sia uno per riga.\n");
@@ -51,17 +65,32 @@ int main(void) {
             fclose(fp_write);
         }
     } else {
-        printf("\nFile caricato correttamente\n\n");
+        printf("\nFile caricato correttamente");
+    }
+    if(fp_frasiRead == NULL){       //se il file delle frasi non c'è si crea
+
+        fp_frasiWrite = fopen(frasiIntro, "w");
+
+        if (!fp_frasiWrite) {printf("Errore durante la creazione del file frasi\n");}
+        else{
+            //Se non c'è nessun file lo creo e ci stampo queste cose base esempio
+            fprintf(fp_frasiWrite, "Ahh, che bella domenica pomeriggio! Non vedevo l'ora di raccogliere margheritine\n e di venire al cinema per guardare 'Mission Impossible: spesa alla Conad con meno di 20 euro'. Ad ogni modo, vorrei:\n");
+            fprintf(fp_frasiWrite, "Finalmente riesco a vedere 'L'uomo che fissava lo scaffale dei biscotti per 40 minuti'. Mi serve però prima:\n");
+            fclose(fp_frasiWrite);
+        }
+    } else {
+        printf("\nFile frasi caricato correttamente\n\n");
     }
 
     //Carico dizionario dal file seguendo lo schema nel readme
-    prodotto *listaProdotti = NULL;
     int count = acquisisciLista(fp_read, &listaProdotti);
+    //Cioé se almeno un elemento è nell'inventario lo stampo
     if (count > 0) {
         stampaInventario(listaProdotti, count);
         }
+
     fclose(fp_read);
-    //ehhe
+    //Chiudo il file
     //Reinizializzare se no non genera numeri casuali a quanto pare
     srand(time(NULL));
 
@@ -69,16 +98,33 @@ int main(void) {
     printf("- Per fermare il giuoco scrivi -1\n- Per vedere l'inventario digita 'i'\n\nInserisci questi valori quando ti chiede quanto fa\n");
     printf("Be fast af\n\n");
     printf("\n");
+    quanteFrasi = prendiFrasiIntro(fp_frasiRead, &listaFrasi);
+    fclose(fp_frasiRead);
+    printf("Premi invio per iniziare: ");
+    scanf("%c", &temp);
 
     while (risposta != -1){
-        n = generaOrdine();//N è il numero di elementi dell'ordine da 1 a MAXPROD
-        printf("Ordine generato: \n");
+
+        //Qui chiamo la funzione che stampa a caso una delle frasi
+        parlaIntro(listaFrasi, quanteFrasi);
+
+        //N è il numero di elementi dell'ordine da 1 a MAXPROD
+        n = generaOrdine();
+        //printf("Ordine generato: \n"); questa parte con le storie non serve più
         totale = scegliProdotti(n, listaProdotti, count);
         risposta = verifica(totale, listaProdotti, count);
         printf("\n");
     }
+
     free(listaProdotti); // libera la memoria allocata
+    free(listaFrasi);
+
     return 0;
+}
+
+void parlaIntro(char **listaFrasi, int quanteFrasi){
+    int index = rand() % quanteFrasi;
+    printf("%s", listaFrasi[index]);
 }
 
 int generaOrdine(){
@@ -91,11 +137,11 @@ float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count){
     float totale = 0;
     for(int i = 0; i<n; i++){
         int prod = rand() % (count);
-        //mi genera un numero che sta ad indicare uno dei prodotti della lista
+        //mi genera un numero che sta a indicare uno dei prodotti della lista
         printf("#%d: %s \n", i+1, listaProdotti[prod].nomeProdotto);
         totale += listaProdotti[prod].prezzo;
     }
-    //printf("Totale: %f", totale);
+
     printf("\n");
     return totale;
 }
@@ -110,6 +156,30 @@ void clearScreen() {
     #else
         printf("Sistema operativo non supportato.\n");
 #endif
+}
+
+int prendiFrasiIntro(FILE *fp_frasiRead, char ***listaFrasi){
+    //Dichiaro stringa in cui metto la frase
+    char line[500];
+    int count = 0;
+
+    //Inizio a leggere, ma prima conto quante righe sono:
+    while (fgets(line, sizeof(line), fp_frasiRead)) count++;
+    rewind(fp_frasiRead);
+    //Allocazione memoria
+    *listaFrasi = malloc(count * sizeof(char*));
+    //Riporto indietro il puntatore
+    count = 0;
+    if (*listaFrasi == NULL) {
+        printf("Errore nell'allocazione della memoria.\n");
+        return 0;
+    }
+    while (fgets(line, sizeof(line), fp_frasiRead)) {
+        (*listaFrasi)[count] = malloc(strlen(line) + 1);
+        if ((*listaFrasi)[count] != NULL) strcpy((*listaFrasi)[count], line);
+        count++;
+    }
+    return count;
 }
 
 int acquisisciLista(FILE *fp_read, prodotto **listaProdotti){
