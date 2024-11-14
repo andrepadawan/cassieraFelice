@@ -2,12 +2,18 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <ctype.h>
 
 #define MaxChar 20
 #define MaxProd 5 //Massimo numero di elementi nel singolo ordine
 #define NumProd 6 //Numero di elementi nell'inventario
 #define dizionario "./listaProdotti.txt"
 #define Max_Line_lenght 50
+/*SEZIONE IDEE
+ * Quando si preme i nella risposta viene visualizzato l'inventario, poi di nuovo il prompt in cui si deve inserire la domanda (senza rigenerare l'ordine)
+ * Premere invio per iniziare
+ * Implementare il resto casuale dal cliente
+ * */
 
 typedef struct {
     char nomeProdotto[MaxChar];
@@ -18,7 +24,8 @@ FILE *fp_read; FILE *fp_write;
 int generaOrdine();
 float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count);
 int acquisisciLista(FILE *fp_read, prodotto **listaProdotti);
-int verifica(float totale);
+int verifica(float totale, prodotto listaProdotti[NumProd], int count);
+void stampaInventario(prodotto listaProdotti[NumProd], int count);
 
 int main(void) {
     int n, risposta = 0;
@@ -28,6 +35,7 @@ int main(void) {
         fp_write = fopen(dizionario, "w");
         if (!fp_write) {printf("Errore durante la creazione del file\n");}
         else{
+            //Se non c'è nessun file lo creo e ci stampo queste cose base esempio
             fprintf(fp_write, "Qui sono tutti i prodotti che sono in vendita,\n");
             fprintf(fp_write, "ne puoi aggiungere quanti vuoi ma l'importante è che sia uno per riga.\n");
             fprintf(fp_write, "\n");
@@ -49,18 +57,15 @@ int main(void) {
     prodotto *listaProdotti = NULL;
     int count = acquisisciLista(fp_read, &listaProdotti);
     if (count > 0) {
-        printf("Inventario:\n");
-        for (int i = 0; i < count; i++) {
-            printf("Prodotto: %s, Prezzo: %.2f\n", listaProdotti[i].nomeProdotto, listaProdotti[i].prezzo);
+        stampaInventario(listaProdotti, count);
         }
-    }
     fclose(fp_read);
     //ehhe
     //Reinizializzare se no non genera numeri casuali a quanto pare
     srand(time(NULL));
 
     printf("\nCiau, qui ti spiego le regole: \n");
-    printf("Per fermare il giuoco scrivi -1 quando ti chiede quanto fa\n");
+    printf("- Per fermare il giuoco scrivi -1\n- Per vedere l'inventario digita 'i'\n\nInserisci questi valori quando ti chiede quanto fa\n");
     printf("Be fast af\n\n");
     printf("\n");
 
@@ -68,7 +73,7 @@ int main(void) {
         n = generaOrdine();//N è il numero di elementi dell'ordine da 1 a MAXPROD
         printf("Ordine generato: \n");
         totale = scegliProdotti(n, listaProdotti, count);
-        risposta = verifica(totale);
+        risposta = verifica(totale, listaProdotti, count);
         printf("\n");
     }
     free(listaProdotti); // libera la memoria allocata
@@ -84,7 +89,7 @@ int generaOrdine(){
 float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count){
     float totale = 0;
     for(int i = 0; i<n; i++){
-        int prod = rand() % (count -1);
+        int prod = rand() % (count);
         //mi genera un numero che sta ad indicare uno dei prodotti della lista
         printf("#%d: %s \n", i+1, listaProdotti[prod].nomeProdotto);
         totale += listaProdotti[prod].prezzo;
@@ -138,26 +143,50 @@ int acquisisciLista(FILE *fp_read, prodotto **listaProdotti){
 }
 
 
-int verifica(float totale){
-    float risposta;
+int verifica(float totale, prodotto listaProdotti[NumProd], int count){//aggiungere anche i valori per la funzione stampa inv
+    //Char risposta perché adesso può essere sia un numero che "i"
+    char risposta[10];
     time_t start, end;
+    float rispostaF;
     double elapsedTime;
     start = time(NULL);
-    printf("Quanto fa? ");
-    fscanf(stdin, "%f", &risposta);
+    while (1){
+        printf("Quanto fa? ");
+        fgets(risposta, sizeof(risposta), stdin);
+        // Rimuove il newline in fondo alla stringa
+        risposta[strcspn(risposta, "\n")] = 0;
+        if (strcmp(risposta, "i") == 0) {
+            stampaInventario(listaProdotti, count);
+            continue; // Torna a chiedere la risposta dopo aver mostrato l'inventario
+        }
+        // Tento di convertire la risposta in float
+        rispostaF = strtof(risposta, NULL);
+        if (rispostaF == 0 && risposta[0] != '0') {
+            printf("Sbagliato l'input. Riprova.\n");
+        } else if (rispostaF == -1){
+            return -1;
+        }
+        else {
+            break; // Esco dal loop se la risposta è un numero valido
+        }
+    }
     end = time(NULL);
     elapsedTime = difftime(end, start);
-    for(int j = 0; j<10;j++){
-        printf("\n");
-    }
-    if(totale==risposta){
+    //caso in cui risposta è un carattere
+    if(totale==rispostaF){
+        system("clear");
         printf("Ottimo! Ci hai messo %d secondi\n", (int)elapsedTime);
-        return risposta;
-    } else if (risposta == -1){
-        printf("Alla prossima!\n");
-        return risposta;
+        //int opzioniPagamenti[] = {0.5, 1, 2, 5, 10, 20, 50}; // es. banconote
+        return 1;
     } else {
         printf("Nu :( la risposta era %.2f\n", totale);
-        return risposta;
+        return 1;
+    }
+}
+
+void stampaInventario(prodotto *listaProdotti, int count){
+    printf("Inventario:\n");
+    for (int i = 0; i < count; i++) {
+        printf("Prodotto: %s, Prezzo: %.2f\n", listaProdotti[i].nomeProdotto, listaProdotti[i].prezzo);
     }
 }
