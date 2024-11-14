@@ -26,6 +26,7 @@ float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count);
 int acquisisciLista(FILE *fp_read, prodotto **listaProdotti);
 int verifica(float totale, prodotto listaProdotti[NumProd], int count);
 void stampaInventario(prodotto listaProdotti[NumProd], int count);
+void clearScreen();
 
 int main(void) {
     int n, risposta = 0;
@@ -97,6 +98,18 @@ float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count){
     //printf("Totale: %f", totale);
     printf("\n");
     return totale;
+}
+
+void clearScreen() {
+#if defined(_WIN32) || defined(_WIN64)
+    system("cls");  // Windows
+#elif defined(__APPLE__) || defined(__MACH__)
+    system("clear"); // Mac OS
+#elif defined(__linux__)
+    system("clear"); // Linux
+    #else
+        printf("Sistema operativo non supportato.\n");
+#endif
 }
 
 int acquisisciLista(FILE *fp_read, prodotto **listaProdotti){
@@ -174,11 +187,12 @@ int verifica(float totale, prodotto listaProdotti[NumProd], int count){//aggiung
     elapsedTime = difftime(end, start);
     //caso in cui risposta è un carattere
     if(totale==rispostaF){
-        system("clear");
+        clearScreen();
         printf("Ottimo! Ci hai messo %d secondi\n", (int)elapsedTime);
         //int opzioniPagamenti[] = {0.5, 1, 2, 5, 10, 20, 50}; // es. banconote
         return 1;
     } else {
+        clearScreen();
         printf("Nu :( la risposta era %.2f\n", totale);
         return 1;
     }
