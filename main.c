@@ -6,7 +6,7 @@
 #define MaxChar 20
 #define MaxProd 5 //Massimo numero di elementi nel singolo ordine
 #define NumProd 6 //Numero di elementi nell'inventario
-#define dizionario "../listaProdotti.txt"
+#define dizionario "./listaProdotti.txt"
 #define Max_Line_lenght 50
 
 typedef struct {
@@ -26,7 +26,21 @@ int main(void) {
     fp_read = fopen(dizionario, "r");
     if(fp_read == NULL){//se il file non c'è si crea
         fp_write = fopen(dizionario, "w");
-        if (!fp_write) printf("Errore durante la creazione del file\n");
+        if (!fp_write) {printf("Errore durante la creazione del file\n");}
+        else{
+            fprintf(fp_write, "Qui sono tutti i prodotti che sono in vendita,\n");
+            fprintf(fp_write, "ne puoi aggiungere quanti vuoi ma l'importante è che sia uno per riga.\n");
+            fprintf(fp_write, "\n");
+            fprintf(fp_write, "//Inizio dizionario\n");
+            fprintf(fp_write, "Intero:8\n");
+            fprintf(fp_write, "Ridotto:6\n");
+            fprintf(fp_write, "Coca-cola:3.5\n");
+            fprintf(fp_write, "Birra media:3.5\n");
+            fprintf(fp_write, "Goleador:0.2\n");
+            fprintf(fp_write, "Birra grande:4.5\n");
+            fprintf(fp_write, "//fine\n");
+            fclose(fp_write);
+        }
     } else {
         printf("\nFile caricato correttamente\n\n");
     }
@@ -35,7 +49,7 @@ int main(void) {
     prodotto *listaProdotti = NULL;
     int count = acquisisciLista(fp_read, &listaProdotti);
     if (count > 0) {
-        printf("Prodotti letti:\n");
+        printf("Inventario:\n");
         for (int i = 0; i < count; i++) {
             printf("Prodotto: %s, Prezzo: %.2f\n", listaProdotti[i].nomeProdotto, listaProdotti[i].prezzo);
         }
