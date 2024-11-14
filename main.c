@@ -55,6 +55,7 @@ int main(void) {
         }
     }
     fclose(fp_read);
+    //ehhe
     //Reinizializzare se no non genera numeri casuali a quanto pare
     srand(time(NULL));
 
