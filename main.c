@@ -84,6 +84,7 @@ int main(void) {
 
     //Carico dizionario dal file seguendo lo schema nel readme
     int count = acquisisciLista(fp_read, &listaProdotti);
+
     //Cioé se almeno un elemento è nell'inventario lo stampo
     if (count > 0) {
         stampaInventario(listaProdotti, count);
@@ -114,10 +115,11 @@ int main(void) {
         totale = scegliProdotti(n, listaProdotti, count);
         risposta = verifica(totale, listaProdotti, count);
         printf("\n");
+
     }
 
     free(listaProdotti); // libera la memoria allocata
-    free(listaFrasi);
+    free(listaFrasi); //libera la lista delle frasi
 
     return 0;
 }
@@ -165,17 +167,21 @@ int prendiFrasiIntro(FILE *fp_frasiRead, char ***listaFrasi){
 
     //Inizio a leggere, ma prima conto quante righe sono:
     while (fgets(line, sizeof(line), fp_frasiRead)) count++;
+
+    //Riporto indietro il puntatore
     rewind(fp_frasiRead);
+
     //Allocazione memoria
     *listaFrasi = malloc(count * sizeof(char*));
-    //Riporto indietro il puntatore
     count = 0;
+
     if (*listaFrasi == NULL) {
         printf("Errore nell'allocazione della memoria.\n");
         return 0;
     }
     while (fgets(line, sizeof(line), fp_frasiRead)) {
         (*listaFrasi)[count] = malloc(strlen(line) + 1);
+
         if ((*listaFrasi)[count] != NULL) strcpy((*listaFrasi)[count], line);
         count++;
     }
@@ -185,6 +191,7 @@ int prendiFrasiIntro(FILE *fp_frasiRead, char ***listaFrasi){
 int acquisisciLista(FILE *fp_read, prodotto **listaProdotti){
     int inizioDizionario = 0, count = 0;
     char line[Max_Line_lenght];
+    
     //inizio a leggere, ma prima devo contare le righe
     while (fgets(line, sizeof(line), fp_read)){//Finché non legge //fine nel file
         if(strncmp(line, "//Inizio dizionario", 18) == 0) {
