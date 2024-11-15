@@ -4,6 +4,9 @@
 #include <string.h>
 #include <ctype.h>
 
+//Questo lo tengo in caso servano sleep lunghi, ma tuttora è
+//stato rimpiazzato da sleep_ms
+
 #ifdef _WIN32
 #include <windows.h>  // Windows-specific library for Sleep
 #define SLEEP(x) Sleep((x) * 1000)  // Windows Sleep takes milliseconds
@@ -43,6 +46,8 @@ int prendiFrasiIntro(FILE *fp_frasiRead, char ***listaFrasi);
 int caricaOpzioni(FILE *fp_read);
 void clearScreen();
 void parlaIntro(char **listaFrasi, int quanteFrasi);
+void stampaTestoAnimato(char *line);
+void sleep_ms(int milliseconds);
 
 //Variabili globali:
 int animazioni = 0; //Se 0 disattiva le animazioni
@@ -52,7 +57,6 @@ int maxNumberOrder = 0; // Numero massimo di elementi che possono essere generat
 
 
 int main(void) {
-
     int n, risposta = 0, quanteFrasi;
     float totale;
     char temp;
@@ -136,8 +140,8 @@ int main(void) {
         parlaIntro(listaFrasi, quanteFrasi);
 
         if(animazioni) {
+            sleep_ms(200);
             fflush(stdout);
-            SLEEP(1);
         }
 
         //N è il numero di elementi dell'ordine da 1 a MAXPROD
@@ -156,9 +160,39 @@ int main(void) {
     return 0;
 }
 
+void stampaTestoAnimato(char *line){
+    int lenght = strlen(line);
+    int aCapo = 0;
+    //questa funzione stampa come se fosse scritto a macchina
+    for(int i = 0; i < lenght; i++){
+        printf("%c", line[i]);
+        aCapo +=1;
+        if ((aCapo>60)&&line[i]==' '){printf("\n"); aCapo = 0;}//vado a capo senza troncare dopo 50 caratteri
+        fflush(stdout);
+        sleep_ms(10);
+    }
+    printf("\n");
+}
+
+void sleep_ms(int milliseconds) {
+#ifdef _WIN32
+    Sleep(milliseconds); // Windows: Sleep accetta millisecondi
+#else
+    usleep(milliseconds * 1000); // Linux/Mac: usleep accetta microsecondi
+#endif
+}
+
 void parlaIntro(char **listaFrasi, int quanteFrasi){
     int index = rand() % quanteFrasi;
-    printf("%s", listaFrasi[index]);
+    if(animazioni){
+        //funzione che stampa con animazioni
+        fflush(stdout);
+        stampaTestoAnimato(listaFrasi[index]);
+    }
+    else{
+        //se animazioni sono disattivate stampa normalmente
+        printf("%s", listaFrasi[index]);
+    }
     fflush(stdout);
 }
 
@@ -173,7 +207,13 @@ float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count){
     for(int i = 0; i<n; i++){
         int prod = rand() % (count);
         //mi genera un numero che sta a indicare uno dei prodotti della lista
-        printf("#%d: %s \n", i+1, listaProdotti[prod].nomeProdotto);
+        if(animazioni){
+            printf("#%d: ", i+1);
+            stampaTestoAnimato(listaProdotti[prod].nomeProdotto);
+        }
+        else {
+            printf("#%d: %s \n", i + 1, listaProdotti[prod].nomeProdotto);
+        }
         totale += listaProdotti[prod].prezzo;
     }
 
@@ -220,6 +260,7 @@ int prendiFrasiIntro(FILE *fp_frasiRead, char ***listaFrasi){
     }
     return count;
 }
+
 int caricaOpzioni(FILE *fp_read) {
     int opzioniTemp = 0;
     char line[100];
@@ -329,13 +370,20 @@ int verifica(float totale, prodotto listaProdotti[NumProd], int count){//aggiung
         printf("\033[32m");//Set printf to green
         printf("Ottimo! Ci hai messo %d secondi\n", (int)elapsedTime);
         printf("\033[0m");//set printf color to default
-        //int opzioniPagamenti[] = {0.5, 1, 2, 5, 10, 20, 50}; // es. banconote
+        if(animazioni){
+            sleep_ms(800);
+        }
+        //Int opzioniPagamenti[] = {0.5, 1, 2, 5, 10, 20, 50}; // es. banconote
         return 1;
     } else {
         clearScreen();
         printf("\033[31m");//Set printf to red
         printf("Nu :( la risposta era %.2f\n", totale);
+        fflush(stdout);
         printf("\033[0m");
+        if(animazioni){
+            sleep_ms(800);
+        }
         return 1;
     }
 }
