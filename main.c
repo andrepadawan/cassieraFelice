@@ -4,17 +4,28 @@
 #include <string.h>
 #include <ctype.h>
 
+#ifdef _WIN32
+#include <windows.h>  // Windows-specific library for Sleep
+#define SLEEP(x) Sleep((x) * 1000)  // Windows Sleep takes milliseconds
+#else
+#include <unistd.h>  // Unix-specific library for sleep (Linux, macOS)
+#define SLEEP(x) sleep(x)  // Unix sleep takes seconds
+#endif
+
 #define MaxChar 20
 #define MaxProd 5 //Massimo numero di elementi nel singolo ordine
 #define NumProd 6 //Numero di elementi nell'inventario
 #define dizionario "./listaProdotti.txt"
 #define frasiIntro "./frasiIntro.txt"
 #define Max_Line_lenght 50
+
 /*SEZIONE IDEE
  * FATTO: Quando si preme i nella risposta viene visualizzato l'inventario, poi di nuovo il prompt in cui si deve inserire la domanda (senza rigenerare l'ordine)
- * Premere invio per iniziare
+ * FATTO: Premere invio per iniziare
  * Implementare il resto casuale dal cliente
- * */
+ * Animazioni attivabili e disattivabili
+ *
+ */
 
 typedef struct {
     char nomeProdotto[MaxChar];
@@ -29,8 +40,16 @@ int acquisisciLista(FILE *fp_read, prodotto **listaProdotti);
 int verifica(float totale, prodotto listaProdotti[NumProd], int count);
 void stampaInventario(prodotto listaProdotti[NumProd], int count);
 int prendiFrasiIntro(FILE *fp_frasiRead, char ***listaFrasi);
+int caricaOpzioni(FILE *fp_read);
 void clearScreen();
 void parlaIntro(char **listaFrasi, int quanteFrasi);
+
+//Variabili globali:
+int animazioni = 0; //Se 0 disattiva le animazioni
+int resto = 0; //Se attivo ti chiede di fare la differenza con quello che ti dà il cliente
+int mandatoryTicket = 0; //Obbligatorio che ci sia almeno un biglietto per ordine
+int maxNumberOrder = 0; // Numero massimo di elementi che possono essere generati in un ordine
+
 
 int main(void) {
 
@@ -74,8 +93,11 @@ int main(void) {
         if (!fp_frasiWrite) {printf("Errore durante la creazione del file frasi\n");}
         else{
             //Se non c'è nessun file lo creo e ci stampo queste cose base esempio
-            fprintf(fp_frasiWrite, "Ahh, che bella domenica pomeriggio! Non vedevo l'ora di raccogliere margheritine\n e di venire al cinema per guardare 'Mission Impossible: spesa alla Conad con meno di 20 euro'. Ad ogni modo, vorrei:\n");
-            fprintf(fp_frasiWrite, "Finalmente riesco a vedere 'L'uomo che fissava lo scaffale dei biscotti per 40 minuti'. Mi serve però prima:\n");
+            fprintf(fp_frasiWrite, "Ahh, che bella domenica pomeriggio! Non vedevo l'ora di raccogliere margheritine "
+                                   "e di venire al cinema per guardare 'Mission Impossible: spesa alla Conad con meno di 20 euro'. "
+                                   "Ad ogni modo, vorrei:\n");
+            fprintf(fp_frasiWrite, "Finalmente riesco a vedere 'L'uomo che fissava lo scaffale dei biscotti per 40 minuti'. "
+                                   "Mi serve però prima:\n");
             fclose(fp_frasiWrite);
         }
     } else {
@@ -90,8 +112,11 @@ int main(void) {
         stampaInventario(listaProdotti, count);
         }
 
+    caricaOpzioni(fp_read);
+
     fclose(fp_read);
     //Chiudo il file
+
     //Reinizializzare se no non genera numeri casuali a quanto pare
     srand(time(NULL));
 
@@ -103,14 +128,21 @@ int main(void) {
     fclose(fp_frasiRead);
     printf("Premi invio per iniziare: ");
     scanf("%c", &temp);
+    clearScreen();
 
     while (risposta != -1){
 
         //Qui chiamo la funzione che stampa a caso una delle frasi
         parlaIntro(listaFrasi, quanteFrasi);
 
+        if(animazioni) {
+            fflush(stdout);
+            SLEEP(1);
+        }
+
         //N è il numero di elementi dell'ordine da 1 a MAXPROD
         n = generaOrdine();
+
         //printf("Ordine generato: \n"); questa parte con le storie non serve più
         totale = scegliProdotti(n, listaProdotti, count);
         risposta = verifica(totale, listaProdotti, count);
@@ -127,6 +159,7 @@ int main(void) {
 void parlaIntro(char **listaFrasi, int quanteFrasi){
     int index = rand() % quanteFrasi;
     printf("%s", listaFrasi[index]);
+    fflush(stdout);
 }
 
 int generaOrdine(){
@@ -187,18 +220,45 @@ int prendiFrasiIntro(FILE *fp_frasiRead, char ***listaFrasi){
     }
     return count;
 }
+int caricaOpzioni(FILE *fp_read) {
+    int opzioniTemp = 0;
+    char line[100];
+    //Da qui in poi sono nella sezione opzioni del file
+    while (fgets(line, sizeof(line), fp_read)) {
+        if(strncmp(line, "//fine opzioni", 14) == 0) break;
+        if (strncmp(line, "//Inizio opzioni", 12) == 0) {
+            opzioniTemp = 1;
+            continue;
+        }
+        if(opzioniTemp){
+            line[strcspn(line, "\n")] = '\0';//Eliminare \n
+            if (strncmp(line, "-Almeno un biglietto per ordine:", 30) == 0) {
+                sscanf(line, "-Almeno un biglietto per ordine:%d", &mandatoryTicket);
+            } else if (strncmp(line, "-Numero massimo di item per ogni ordine:", 40) == 0) {
+                sscanf(line, "-Numero massimo di item per ogni ordine:%d", &maxNumberOrder);
+            } else if (strncmp(line, "-Animazioni:", 12) == 0) {
+                sscanf(line, "-Animazioni:%d", &animazioni);
+            } else if (strncmp(line, "-Resto:", 7) == 0) {
+                sscanf(line, "-Resto:%d", &resto);
+            }
+        }
+    }
+
+    rewind(fp_read);
+    return 0;
+}
 
 int acquisisciLista(FILE *fp_read, prodotto **listaProdotti){
     int inizioDizionario = 0, count = 0;
     char line[Max_Line_lenght];
-    
+
     //inizio a leggere, ma prima devo contare le righe
     while (fgets(line, sizeof(line), fp_read)){//Finché non legge //fine nel file
         if(strncmp(line, "//Inizio dizionario", 18) == 0) {
             inizioDizionario = 1;
             continue;
         }
-        if (strncmp(line, "//fine", 5) == 0) {
+        if (strncmp(line, "//fine dizionario", 17) == 0) {
             break;
         }
         if(inizioDizionario){
@@ -229,6 +289,7 @@ int acquisisciLista(FILE *fp_read, prodotto **listaProdotti){
             count += 1;
         }
     }
+    rewind(fp_read);
     return count;
 }
 
@@ -265,12 +326,16 @@ int verifica(float totale, prodotto listaProdotti[NumProd], int count){//aggiung
     //caso in cui risposta è un carattere
     if(totale==rispostaF){
         clearScreen();
+        printf("\033[32m");//Set printf to green
         printf("Ottimo! Ci hai messo %d secondi\n", (int)elapsedTime);
+        printf("\033[0m");//set printf color to default
         //int opzioniPagamenti[] = {0.5, 1, 2, 5, 10, 20, 50}; // es. banconote
         return 1;
     } else {
         clearScreen();
+        printf("\033[31m");//Set printf to red
         printf("Nu :( la risposta era %.2f\n", totale);
+        printf("\033[0m");
         return 1;
     }
 }
