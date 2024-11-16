@@ -544,6 +544,7 @@ int verifica(float totale, prodotto listaProdotti[NumProd], int count, int quant
             clearScreen();
         }
         else {
+            clearScreen();
             return 1;
         }
     } else {
@@ -554,7 +555,7 @@ int verifica(float totale, prodotto listaProdotti[NumProd], int count, int quant
         printf("\033[0m");
         printf("\n");
         if(animazioni){
-            sleep_ms(700);
+            sleep_ms(800);
         }
         return 1;
     }
