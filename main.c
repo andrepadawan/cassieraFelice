@@ -3,6 +3,7 @@
 #include <time.h>
 #include <string.h>
 #include <ctype.h>
+#include "math.h"
 
 //Questo lo tengo in caso servano sleep lunghi, ma tuttora è
 //stato rimpiazzato da sleep_ms
@@ -48,9 +49,10 @@ int prendiFrasiResto(FILE *fp_frasiRead, char ***listaResto);
 int caricaOpzioni(FILE *fp_read);
 void clearScreen();
 void parlaIntro(char **listaFrasi, int quanteFrasi);
+void parlaResto(char **listaResto, int quantoResto);
 void stampaTestoAnimato(char *line);
 void sleep_ms(int milliseconds);
-void restoFunc();
+void restoFunc(float totale);
 
 //Variabili globali:
 int animazioni = 0; //Se 0 disattiva le animazioni
@@ -342,6 +344,73 @@ int acquisisciLista(FILE *fp_read, prodotto **listaProdotti){
     return count;
 }
 
+void restoFunc(float totale) {
+    //Qui decido che il cliente dà una banconota di un certo valore
+    //parlaResto();
+    float valute[9] = {0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50};
+    int numValute = (sizeof(valute))/sizeof(valute[0]);
+    float soldiCliente = 0, rispostaF = 0, restoDaDare = 0;
+    int index = 0;
+    char risposta[8];
+    char *frase = "Ecco a te i contanti:  ";
+    if(animazioni){
+        stampaTestoAnimato(frase);
+    } else {
+        printf("%s", frase);
+    }
+    int count = 0;
+    srand(time(NULL));
+    //Una soluzione per evitare resti giganteschi può essere quella di generare due o più resti casuali diversi
+    //Per poi scegliere quello con il minor numero di monete
+
+    while(soldiCliente < totale){
+        index = rand() % numValute;
+        if (count >= 1){ //cioé è stata estratta almeno una banconota (un qualcuno può pagare 50 euro per poche cose)
+            // Se il cliente ha già una buona somma, evita di aggiungere valori troppo grandi che rendono il resto poco improbabile
+            if (soldiCliente + valute[index] > totale && valute[index] > 10) {
+                continue;  // Salta questa iterazione se il valore è troppo grande rispetto al totale mancante
+            }
+        }
+        soldiCliente += valute[index];
+        printf("%.2f  ", valute[index]);
+        count += 1;
+        if (soldiCliente >= totale) {
+            break;
+        }
+    }
+    printf("\n");
+
+    //calcolo resto
+    restoDaDare = soldiCliente - totale;
+
+    if(animazioni){
+        char frase[] = "Quant'è il resto? ";
+        stampaTestoAnimato(frase);
+        fgets(risposta, sizeof(risposta), stdin);
+        rispostaF = strtof(risposta, NULL);
+    } else {
+        printf("Quant'è il resto? ");
+        fgets(risposta, sizeof(risposta), stdin);
+        rispostaF = strtof(risposta, NULL);
+    }
+    restoDaDare = round(restoDaDare* 100) / 100;
+
+    if(rispostaF==restoDaDare){
+        //Giusto
+        printf("\033[32m");//Set printf to green
+        printf("Ottimo! Ci hai preso\n");
+        printf("\033[0m");
+        } else {
+        //sbagliato
+        printf("\033[31m");//Set printf to red
+        printf("Nu :( la risposta era %.2f\n", restoDaDare);
+        fflush(stdout);
+        printf("\033[0m");
+        if(animazioni){
+            sleep_ms(800);
+        }
+    }
+}
 
 int verifica(float totale, prodotto listaProdotti[NumProd], int count){//aggiungere anche i valori per la funzione stampa inv
     //Char risposta perché adesso può essere sia un numero che "i"
@@ -373,16 +442,31 @@ int verifica(float totale, prodotto listaProdotti[NumProd], int count){//aggiung
     end = time(NULL);
     elapsedTime = difftime(end, start);
     //caso in cui risposta è un carattere
+    //Arrotondiamo se no si incazza nelle risposte
+    totale = roundf(totale*100)/100;
+
     if(totale==rispostaF){
         clearScreen();
         printf("\033[32m");//Set printf to green
-        printf("Ottimo! Ci hai messo %d secondi\n", (int)elapsedTime);
+        printf("Ottimo! Ci hai messo %d secondi\n\n", (int)elapsedTime);
         printf("\033[0m");//set printf color to default
         if(animazioni){
             sleep_ms(800);
         }
         //Int opzioniPagamenti[] = {0.5, 1, 2, 5, 10, 20, 50}; // es. banconote
-        return 1;
+        if(resto){
+            srand(time(NULL));
+            int prob = rand() % 100 < 40;
+            //printf("%d", prob);
+            //la modalità resto è attiva, ha senso proseguire qui solo se la risposta è giusta;
+            if(prob){
+                restoFunc(totale);
+                return 1;
+            }
+        }
+        else {
+            return 1;
+        }
     } else {
         clearScreen();
         printf("\033[31m");//Set printf to red
@@ -394,6 +478,7 @@ int verifica(float totale, prodotto listaProdotti[NumProd], int count){//aggiung
         }
         return 1;
     }
+    return 1;
 }
 
 void stampaInventario(prodotto *listaProdotti, int count){
