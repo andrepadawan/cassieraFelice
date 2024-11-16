@@ -20,13 +20,14 @@
 #define NumProd 6 //Numero di elementi nell'inventario
 #define dizionario "./listaProdotti.txt"
 #define frasiIntro "./frasiIntro.txt"
+#define frasiResto "./frasiResto.txt"
 #define Max_Line_lenght 50
 
 /*SEZIONE IDEE
  * FATTO: Quando si preme i nella risposta viene visualizzato l'inventario, poi di nuovo il prompt in cui si deve inserire la domanda (senza rigenerare l'ordine)
  * FATTO: Premere invio per iniziare
  * Implementare il resto casuale dal cliente
- * Animazioni attivabili e disattivabili
+ * FATTO: Animazioni attivabili e disattivabili
  *
  */
 
@@ -35,7 +36,7 @@ typedef struct {
     float prezzo;
 } prodotto;
 
-FILE *fp_read; FILE *fp_write; FILE *fp_frasiRead; FILE *fp_frasiWrite;
+FILE *fp_read; FILE *fp_write; FILE *fp_frasiRead; FILE *fp_frasiWrite; FILE *fpr_resto; FILE fpw_resto;
 
 int generaOrdine();
 float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count);
@@ -43,17 +44,21 @@ int acquisisciLista(FILE *fp_read, prodotto **listaProdotti);
 int verifica(float totale, prodotto listaProdotti[NumProd], int count);
 void stampaInventario(prodotto listaProdotti[NumProd], int count);
 int prendiFrasiIntro(FILE *fp_frasiRead, char ***listaFrasi);
+int prendiFrasiResto(FILE *fp_frasiRead, char ***listaResto);
 int caricaOpzioni(FILE *fp_read);
 void clearScreen();
 void parlaIntro(char **listaFrasi, int quanteFrasi);
 void stampaTestoAnimato(char *line);
 void sleep_ms(int milliseconds);
+void restoFunc();
 
 //Variabili globali:
 int animazioni = 0; //Se 0 disattiva le animazioni
 int resto = 0; //Se attivo ti chiede di fare la differenza con quello che ti dà il cliente
 int mandatoryTicket = 0; //Obbligatorio che ci sia almeno un biglietto per ordine
 int maxNumberOrder = 0; // Numero massimo di elementi che possono essere generati in un ordine
+int storia = 0;
+int giorno = 1;
 
 
 int main(void) {
@@ -65,6 +70,7 @@ int main(void) {
 
     fp_read = fopen(dizionario, "r");
     fp_frasiRead = fopen(frasiIntro, "r");
+    fpr_resto = fopen(frasiResto, "r");
 
     if(fp_read == NULL){       //se il file non c'è si crea
 
@@ -167,7 +173,7 @@ void stampaTestoAnimato(char *line){
     for(int i = 0; i < lenght; i++){
         printf("%c", line[i]);
         aCapo +=1;
-        if ((aCapo>60)&&line[i]==' '){printf("\n"); aCapo = 0;}//vado a capo senza troncare dopo 50 caratteri
+        if ((aCapo>60)&&line[i]==' '){printf("\n"); aCapo = 0;}     //vado a capo senza troncare dopo 50 caratteri
         fflush(stdout);
         sleep_ms(10);
     }
@@ -281,6 +287,8 @@ int caricaOpzioni(FILE *fp_read) {
                 sscanf(line, "-Animazioni:%d", &animazioni);
             } else if (strncmp(line, "-Resto:", 7) == 0) {
                 sscanf(line, "-Resto:%d", &resto);
+            } else if(strncmp(line, "-Storia", 7) == 0) {
+                sscanf(line, "-Storia:%d", &storia );
             }
         }
     }
