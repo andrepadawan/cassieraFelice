@@ -162,8 +162,6 @@ int main(void) {
         //printf("Ordine generato: \n"); questa parte con le storie non serve più
         totale = scegliProdotti(n, listaProdotti, count);
         risposta = verifica(totale, listaProdotti, count, quanteFrasiResto, listaFrasiResto);
-        printf("\n");
-
     }
 
     free(listaProdotti); // libera la memoria allocata
@@ -438,7 +436,14 @@ void restoFunc(float totale, int quanteFrasiResto, char **listaFrasiResto) {
             }
         }
         soldiCliente += valute[index];
-        printf("%.2f  ", valute[index]);
+        if(animazioni){
+            printf("%.2f  ", valute[index]);
+            fflush(stdout);
+            sleep_ms(150);
+        }
+        else {
+            printf("%.2f  ", valute[index]);
+        }
         count += 1;
         if (soldiCliente >= totale) {
             break;
@@ -466,6 +471,9 @@ void restoFunc(float totale, int quanteFrasiResto, char **listaFrasiResto) {
         printf("\033[32m");//Set printf to green
         printf("Ottimo! Ci hai preso\n");
         printf("\033[0m");
+        if(animazioni){
+            sleep_ms(800);
+        }
         } else {
         //sbagliato
         printf("\033[31m");//Set printf to red
@@ -516,7 +524,6 @@ int verifica(float totale, prodotto listaProdotti[NumProd], int count, int quant
     totale = roundf(totale*100)/100;
 
     if(totale==rispostaF){
-        clearScreen();
         printf("\033[32m");//Set printf to green
         printf("Ottimo! Ci hai messo %d secondi\n\n", (int)elapsedTime);
         printf("\033[0m");//set printf color to default
@@ -531,8 +538,10 @@ int verifica(float totale, prodotto listaProdotti[NumProd], int count, int quant
             //la modalità resto è attiva, ha senso proseguire qui solo se la risposta è giusta;
             if(prob){
                 restoFunc(totale, quanteFrasiResto, listaFrasiResto);
+                clearScreen();
                 return 1;
             }
+            clearScreen();
         }
         else {
             return 1;
@@ -543,8 +552,9 @@ int verifica(float totale, prodotto listaProdotti[NumProd], int count, int quant
         printf("Nu :( la risposta era %.2f\n", totale);
         fflush(stdout);
         printf("\033[0m");
+        printf("\n");
         if(animazioni){
-            sleep_ms(800);
+            sleep_ms(700);
         }
         return 1;
     }
