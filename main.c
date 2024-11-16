@@ -21,7 +21,6 @@
 #define NumProd 6 //Numero di elementi nell'inventario
 #define dizionario "./listaProdotti.txt"
 #define frasiIntro "./frasiIntro.txt"
-#define frasiResto "./frasiResto.txt"
 #define Max_Line_lenght 50
 
 /*SEZIONE IDEE
@@ -37,22 +36,22 @@ typedef struct {
     float prezzo;
 } prodotto;
 
-FILE *fp_read; FILE *fp_write; FILE *fp_frasiRead; FILE *fp_frasiWrite; FILE *fpr_resto; FILE fpw_resto;
+FILE *fp_read; FILE *fp_write; FILE *fp_frasiRead; FILE *fp_frasiWrite;
 
 int generaOrdine();
 float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count);
 int acquisisciLista(FILE *fp_read, prodotto **listaProdotti);
-int verifica(float totale, prodotto listaProdotti[NumProd], int count);
+int verifica(float totale, prodotto listaProdotti[NumProd], int count, int quanteFrasiResto, char **listaFrasiResto);
 void stampaInventario(prodotto listaProdotti[NumProd], int count);
 int prendiFrasiIntro(FILE *fp_frasiRead, char ***listaFrasi);
 int prendiFrasiResto(FILE *fp_frasiRead, char ***listaResto);
 int caricaOpzioni(FILE *fp_read);
 void clearScreen();
-void parlaIntro(char **listaFrasi, int quanteFrasi);
-void parlaResto(char **listaResto, int quantoResto);
+void parla(char **listaFrasi, int quanteFrasi);
 void stampaTestoAnimato(char *line);
 void sleep_ms(int milliseconds);
-void restoFunc(float totale);
+void restoFunc(float totale, int quanteFrasiResto, char **listaFrasiResto);
+float leggiInputResto();
 
 //Variabili globali:
 int animazioni = 0; //Se 0 disattiva le animazioni
@@ -62,17 +61,16 @@ int maxNumberOrder = 0; // Numero massimo di elementi che possono essere generat
 int storia = 0;
 int giorno = 1;
 
-
 int main(void) {
-    int n, risposta = 0, quanteFrasi;
+    int n, risposta = 0, quanteFrasiIntro, quanteFrasiResto;
     float totale;
     char temp;
     prodotto *listaProdotti = NULL;
     char **listaFrasi = NULL;
+    char **listaFrasiResto = NULL;
 
     fp_read = fopen(dizionario, "r");
     fp_frasiRead = fopen(frasiIntro, "r");
-    fpr_resto = fopen(frasiResto, "r");
 
     if(fp_read == NULL){       //se il file non c'è si crea
 
@@ -104,12 +102,16 @@ int main(void) {
 
         if (!fp_frasiWrite) {printf("Errore durante la creazione del file frasi\n");}
         else{
+            fprintf(fp_frasiWrite, "//Inizio frasi intro");
             //Se non c'è nessun file lo creo e ci stampo queste cose base esempio
             fprintf(fp_frasiWrite, "Ahh, che bella domenica pomeriggio! Non vedevo l'ora di raccogliere margheritine "
                                    "e di venire al cinema per guardare 'Mission Impossible: spesa alla Conad con meno di 20 euro'. "
                                    "Ad ogni modo, vorrei:\n");
             fprintf(fp_frasiWrite, "Finalmente riesco a vedere 'L'uomo che fissava lo scaffale dei biscotti per 40 minuti'. "
                                    "Mi serve però prima:\n");
+            fprintf(fp_frasiWrite, "//fine frasi intro");
+            fprintf(fp_frasiWrite, "//inizio frasi resto");
+            fprintf(fp_frasiWrite, "//fine frasi resto");
             fclose(fp_frasiWrite);
         }
     } else {
@@ -136,7 +138,10 @@ int main(void) {
     printf("- Per fermare il giuoco scrivi -1\n- Per vedere l'inventario digita 'i'\n\nInserisci questi valori quando ti chiede quanto fa\n");
     printf("Be fast af\n\n");
     printf("\n");
-    quanteFrasi = prendiFrasiIntro(fp_frasiRead, &listaFrasi);
+    quanteFrasiIntro = prendiFrasiIntro(fp_frasiRead, &listaFrasi);
+    quanteFrasiResto = prendiFrasiResto(fp_frasiRead, &listaFrasiResto);
+    //printf("%d ", quanteFrasiResto);
+    // printf("%d ", quanteFrasiIntro);
     fclose(fp_frasiRead);
     printf("Premi invio per iniziare: ");
     scanf("%c", &temp);
@@ -145,26 +150,25 @@ int main(void) {
     while (risposta != -1){
 
         //Qui chiamo la funzione che stampa a caso una delle frasi
-        parlaIntro(listaFrasi, quanteFrasi);
-
+        parla(listaFrasi, quanteFrasiIntro);
         if(animazioni) {
             sleep_ms(200);
             fflush(stdout);
         }
-
+        fflush(stdout);
         //N è il numero di elementi dell'ordine da 1 a MAXPROD
         n = generaOrdine();
-
+        printf("\n");
         //printf("Ordine generato: \n"); questa parte con le storie non serve più
         totale = scegliProdotti(n, listaProdotti, count);
-        risposta = verifica(totale, listaProdotti, count);
+        risposta = verifica(totale, listaProdotti, count, quanteFrasiResto, listaFrasiResto);
         printf("\n");
 
     }
 
     free(listaProdotti); // libera la memoria allocata
     free(listaFrasi); //libera la lista delle frasi
-
+    free(listaFrasiResto);
     return 0;
 }
 
@@ -190,16 +194,19 @@ void sleep_ms(int milliseconds) {
 #endif
 }
 
-void parlaIntro(char **listaFrasi, int quanteFrasi){
+void parla(char **listaFrasi, int quanteFrasi){
     int index = rand() % quanteFrasi;
+    //printf("\nIndice: %d, var:%d\n", index, quanteFrasi);
     if(animazioni){
         //funzione che stampa con animazioni
         fflush(stdout);
         stampaTestoAnimato(listaFrasi[index]);
+
     }
     else{
         //se animazioni sono disattivate stampa normalmente
         printf("%s", listaFrasi[index]);
+
     }
     fflush(stdout);
 }
@@ -241,31 +248,90 @@ void clearScreen() {
 #endif
 }
 
+int prendiFrasiResto(FILE *fp_frasiRead, char ***listaFrasiResto) {
+    char line[500];
+    int count = 0;
+    int frasiRestoTemp = 0;
+    while (fgets(line, sizeof(line), fp_frasiRead)) {
+        if (strncmp(line, "//fine frasi resto", 18) == 0) break;
+        if (strncmp(line, "//Inizio frasi resto", 19) == 0) {
+            frasiRestoTemp = 1;
+            continue;
+        }
+        if (frasiRestoTemp) {
+            count++;
+        }
+    }
+        //Allocazione memoria
+        //
+        rewind(fp_frasiRead);
+        *listaFrasiResto = malloc(count * sizeof(char *));
+
+        if (*listaFrasiResto == NULL) {
+            printf("Errore nell'allocazione della memoria frasi resto.\n");
+            return 0;
+        }
+
+        count = 0;
+
+        while (fgets(line, sizeof(line), fp_frasiRead)) {
+            if (strncmp(line, "//fine frasi resto", 18) == 0) break;
+            if (strncmp(line, "//inizio frasi resto", 19) == 0) {
+                frasiRestoTemp = 1;
+                continue;
+            }
+            if (frasiRestoTemp) {
+                line[strcspn(line, "\n")] = '\0';//Eliminare \n
+
+                (*listaFrasiResto)[count] = malloc(strlen(line) + 1);
+                if ((*listaFrasiResto)[count] != NULL) strcpy((*listaFrasiResto)[count], line);
+                count++;
+            }
+        };
+        return count;
+}
+
 int prendiFrasiIntro(FILE *fp_frasiRead, char ***listaFrasi){
     //Dichiaro stringa in cui metto la frase
     char line[500];
     int count = 0;
+    int frasiIntroTemp = 0;
+    //Allocazione memoria
 
     //Inizio a leggere, ma prima conto quante righe sono:
-    while (fgets(line, sizeof(line), fp_frasiRead)) count++;
-
-    //Riporto indietro il puntatore
+    while (fgets(line, sizeof(line), fp_frasiRead)) {
+        if(strncmp(line, "//fine frasi intro", 18) == 0) break;
+        if (strncmp(line, "//Inizio frasi intro", 19) == 0) {
+            frasiIntroTemp = 1;
+            continue;
+        }
+        if(frasiIntroTemp){
+            count++;
+        }
+    }
     rewind(fp_frasiRead);
-
-    //Allocazione memoria
     *listaFrasi = malloc(count * sizeof(char*));
-    count = 0;
 
     if (*listaFrasi == NULL) {
-        printf("Errore nell'allocazione della memoria.\n");
+        printf("Errore nell'allocazione della memoria intro.\n");
         return 0;
     }
-    while (fgets(line, sizeof(line), fp_frasiRead)) {
-        (*listaFrasi)[count] = malloc(strlen(line) + 1);
 
+    count = 0;
+    while (fgets(line, sizeof(line), fp_frasiRead)) {
+        if(strncmp(line, "//fine frasi intro", 16) == 0) break;
+        if (strncmp(line, "//Inizio frasi intro", 19) == 0) {
+            frasiIntroTemp = 1;
+            continue;
+        }
+        if(frasiIntroTemp){
+            line[strcspn(line, "\n")] = '\0';//Eliminare \n
+        }
+        (*listaFrasi)[count] = malloc(strlen(line) + 1);
         if ((*listaFrasi)[count] != NULL) strcpy((*listaFrasi)[count], line);
         count++;
     }
+    rewind(fp_frasiRead);
     return count;
 }
 
@@ -319,7 +385,7 @@ int acquisisciLista(FILE *fp_read, prodotto **listaProdotti){
     }
     *listaProdotti = malloc(count * sizeof(prodotto));
     if (*listaProdotti == NULL) {
-        printf("Errore nell'allocazione della memoria.\n");
+        printf("Errore nell'allocazione della memoria acquisisci lista.\n");
         return 0;
     }
     //porto indietro il puntatore
@@ -340,19 +406,19 @@ int acquisisciLista(FILE *fp_read, prodotto **listaProdotti){
             count += 1;
         }
     }
-    rewind(fp_read);
+    rewind(fp_frasiRead);
     return count;
 }
 
-void restoFunc(float totale) {
+void restoFunc(float totale, int quanteFrasiResto, char **listaFrasiResto) {
     //Qui decido che il cliente dà una banconota di un certo valore
-    //parlaResto();
     float valute[9] = {0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50};
     int numValute = (sizeof(valute))/sizeof(valute[0]);
     float soldiCliente = 0, rispostaF = 0, restoDaDare = 0;
     int index = 0;
     char risposta[8];
-    char *frase = "Ecco a te i contanti:  ";
+    parla(listaFrasiResto, quanteFrasiResto); //Sta funzione dà problemi
+    char *frase = "Ecco a te:  ";
     if(animazioni){
         stampaTestoAnimato(frase);
     } else {
@@ -412,24 +478,28 @@ void restoFunc(float totale) {
     }
 }
 
-int verifica(float totale, prodotto listaProdotti[NumProd], int count){//aggiungere anche i valori per la funzione stampa inv
+int verifica(float totale, prodotto listaProdotti[NumProd], int count, int quanteFrasiResto, char **listaFrasiResto){//aggiungere anche i valori per la funzione stampa inv
     //Char risposta perché adesso può essere sia un numero che "i"
     char risposta[10];
     time_t start, end;
     float rispostaF;
     double elapsedTime;
     start = time(NULL);
+    fflush(stdout);
     while (1){
         printf("Quanto fa? ");
         fgets(risposta, sizeof(risposta), stdin);
         // Rimuove il newline in fondo alla stringa
         risposta[strcspn(risposta, "\n")] = 0;
+
         if (strcmp(risposta, "i") == 0) {
             stampaInventario(listaProdotti, count);
             continue; // Torna a chiedere la risposta dopo aver mostrato l'inventario
         }
+
         // Tento di convertire la risposta in float
         rispostaF = strtof(risposta, NULL);
+
         if (rispostaF == 0 && risposta[0] != '0') {
             printf("Sbagliato l'input. Riprova.\n");
         } else if (rispostaF == -1){
@@ -460,7 +530,7 @@ int verifica(float totale, prodotto listaProdotti[NumProd], int count){//aggiung
             //printf("%d", prob);
             //la modalità resto è attiva, ha senso proseguire qui solo se la risposta è giusta;
             if(prob){
-                restoFunc(totale);
+                restoFunc(totale, quanteFrasiResto, listaFrasiResto);
                 return 1;
             }
         }
