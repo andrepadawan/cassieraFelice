@@ -11,13 +11,14 @@
 #ifdef _WIN32
 #include <windows.h>  // Windows-specific library for Sleep
 #define SLEEP(x) Sleep((x) * 1000)  // Windows Sleep takes milliseconds
+#pragma message "Sto girando su windows"
 #else
+#pragma message "non windows environment"
 #include <unistd.h>  // Unix-specific library for sleep (Linux, macOS)
 #define SLEEP(x) sleep(x)  // Unix sleep takes seconds
 #endif
 
 #define MaxChar 20
-#define MaxProd 5 //Massimo numero di elementi nel singolo ordine
 #define NumProd 6 //Numero di elementi nell'inventario
 #define dizionario "./listaProdotti.txt"
 #define frasiIntro "./frasiIntro.txt"
@@ -36,6 +37,11 @@ typedef struct {
     float prezzo;
 } prodotto;
 
+typedef struct {
+    int index;
+    int count;
+} prodottoEstratto;
+
 FILE *fp_read; FILE *fp_write; FILE *fp_frasiRead; FILE *fp_frasiWrite;
 
 int generaOrdine();
@@ -51,7 +57,6 @@ void parla(char **listaFrasi, int quanteFrasi);
 void stampaTestoAnimato(char *line);
 void sleep_ms(int milliseconds);
 void restoFunc(float totale, int quanteFrasiResto, char **listaFrasiResto);
-float leggiInputResto();
 
 //Variabili globali:
 int animazioni = 0; //Se 0 disattiva le animazioni
@@ -211,15 +216,30 @@ void parla(char **listaFrasi, int quanteFrasi){
 
 int generaOrdine(){
     int n;
-    n = rand() % MaxProd+1;
+    n = rand() % maxNumberOrder+1;
     return n;
 }
 
 float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count){
     float totale = 0;
-    for(int i = 0; i<n; i++){
+    prodottoEstratto *arrayEstratto;
+    arrayEstratto = malloc(n * sizeof(prodottoEstratto));
+    if (arrayEstratto == NULL) {
+        printf("Errore di allocazione memoria nella scelta dei prodotti.\n");
+        return 1; // Uscita con errore
+    }
+    for(int i = 0; i< n; i++){
+        arrayEstratto[i].index = 999;//Inizializzo con un numero improbabile, poichè a 0 non posso siccome è un id di un prodotto.
+    }
+    srand(time(NULL));
+    for(int i = 0; i<n; i++) {//while i<n
         int prod = rand() % (count);
-        //mi genera un numero che sta a indicare uno dei prodotti della lista
+        for (int j = 0; j < n; j++) {
+            if (arrayEstratto[j].index == prod && arrayEstratto[j].count > 1) {
+                i--;//valore c'è già per due volte, ripeto estrazione
+                continue;
+            }
+        }
         if(animazioni){
             printf("#%d: ", i+1);
             stampaTestoAnimato(listaProdotti[prod].nomeProdotto);
@@ -228,8 +248,11 @@ float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count){
             printf("#%d: %s \n", i + 1, listaProdotti[prod].nomeProdotto);
         }
         totale += listaProdotti[prod].prezzo;
+        arrayEstratto[i].index = prod;
+        arrayEstratto[i].count += 1;
     }
-
+        //mi genera un numero che sta a indicare uno dei prodotti della lista
+    free(arrayEstratto);
     printf("\n");
     return totale;
 }
@@ -410,7 +433,7 @@ int acquisisciLista(FILE *fp_read, prodotto **listaProdotti){
 
 void restoFunc(float totale, int quanteFrasiResto, char **listaFrasiResto) {
     //Qui decido che il cliente dà una banconota di un certo valore
-    float valute[9] = {0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50};
+    float valute[7] = { 0.5, 1, 2, 5, 10, 20, 50};
     int numValute = (sizeof(valute))/sizeof(valute[0]);
     float soldiCliente = 0, rispostaF = 0, restoDaDare = 0;
     int index = 0;
