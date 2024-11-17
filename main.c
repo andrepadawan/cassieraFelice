@@ -19,7 +19,6 @@
 #endif
 
 #define MaxChar 20
-#define NumProd 6 //Numero di elementi nell'inventario
 #define dizionario "./listaProdotti.txt"
 #define frasiIntro "./frasiIntro.txt"
 #define Max_Line_lenght 50
@@ -45,10 +44,10 @@ typedef struct {
 FILE *fp_read; FILE *fp_write; FILE *fp_frasiRead; FILE *fp_frasiWrite;
 
 int generaOrdine();
-float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count);
+float scegliProdotti(int n, prodotto listaProdotti[], int count);
 int acquisisciLista(FILE *fp_read, prodotto **listaProdotti);
-int verifica(float totale, prodotto listaProdotti[NumProd], int count, int quanteFrasiResto, char **listaFrasiResto);
-void stampaInventario(prodotto listaProdotti[NumProd], int count);
+int verifica(float totale, prodotto listaProdotti[], int count, int quanteFrasiResto, char **listaFrasiResto);
+void stampaInventario(prodotto listaProdotti[], int count);
 int prendiFrasiIntro(FILE *fp_frasiRead, char ***listaFrasi);
 int prendiFrasiResto(FILE *fp_frasiRead, char ***listaResto);
 int caricaOpzioni(FILE *fp_read);
@@ -64,7 +63,7 @@ int resto = 0; //Se attivo ti chiede di fare la differenza con quello che ti dà
 int mandatoryTicket = 0; //Obbligatorio che ci sia almeno un biglietto per ordine
 int maxNumberOrder = 0; // Numero massimo di elementi che possono essere generati in un ordine
 int storia = 0;
-int giorno = 1;
+//int giorno = 1;
 
 int main(void) {
     int n, risposta = 0, quanteFrasiIntro, quanteFrasiResto;
@@ -220,7 +219,7 @@ int generaOrdine(){
     return n;
 }
 
-float scegliProdotti(int n, prodotto listaProdotti[NumProd], int count){
+float scegliProdotti(int n, prodotto listaProdotti[], int count){
     float totale = 0;
     prodottoEstratto *arrayEstratto;
     arrayEstratto = malloc(n * sizeof(prodottoEstratto));
@@ -509,7 +508,7 @@ void restoFunc(float totale, int quanteFrasiResto, char **listaFrasiResto) {
     }
 }
 
-int verifica(float totale, prodotto listaProdotti[NumProd], int count, int quanteFrasiResto, char **listaFrasiResto){//aggiungere anche i valori per la funzione stampa inv
+int verifica(float totale, prodotto listaProdotti[], int count, int quanteFrasiResto, char **listaFrasiResto){//aggiungere anche i valori per la funzione stampa inv
     //Char risposta perché adesso può essere sia un numero che "i"
     char risposta[10];
     time_t start, end;
