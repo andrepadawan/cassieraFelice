@@ -415,7 +415,7 @@ void restoFunc(float totale, int quanteFrasiResto, char **listaFrasiResto) {
     float soldiCliente = 0, rispostaF = 0, restoDaDare = 0;
     int index = 0;
     char risposta[8];
-    parla(listaFrasiResto, quanteFrasiResto); //Sta funzione dà problemi
+    parla(listaFrasiResto, quanteFrasiResto);
     char *frase = "Ecco a te:  ";
     if(animazioni){
         stampaTestoAnimato(frase);
