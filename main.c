@@ -8,12 +8,52 @@
 //Questo lo tengo in caso servano sleep lunghi, ma tuttora è
 //stato rimpiazzato da sleep_ms
 
-#ifdef _WIN32
-#include <windows.h>  // Windows-specific library for Sleep
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <io.h>
 #define SLEEP(x) Sleep((x) * 1000)  // Windows Sleep takes milliseconds
-#pragma message "Sto girando su windows"
+#pragma message "Compilo per Windows"
+
+void impostaTerminaleUTF8() {
+        HWND consoleWnd = GetConsoleWindow();
+    if (consoleWnd == NULL) {
+        // Se non esiste, ne crea una nuova
+        if (!AllocConsole()) {
+            // Gestione errore
+            MessageBox(NULL, "Impossibile allocare la console!", "Errore", MB_ICONERROR);
+            return;
+        }
+    }
+
+    // Ottiene gli handle per stdin e stdout
+    HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+    HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+
+    if (hStdout == INVALID_HANDLE_VALUE || hStdin == INVALID_HANDLE_VALUE) {
+        MessageBox(NULL, "Errore nell'ottenere gli handle della console!", "Errore", MB_ICONERROR);
+        return;
+    }
+
+    // Riapre gli stream standard
+    FILE* fpstdin = _fdopen(_open_osfhandle((intptr_t)hStdin, _O_TEXT), "r");
+    FILE* fpstdout = _fdopen(_open_osfhandle((intptr_t)hStdout, _O_TEXT), "w");
+
+    // Reindirizza gli stream standard
+    *stdin = *fpstdin;
+    *stdout = *fpstdout;
+
+    // Imposta la codifica UTF-8
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+
+    // Imposta il buffer di stdout
+    setvbuf(stdout, NULL, _IONBF, 0);
+    }
+
 #else
-#pragma message "non windows environment"
+#pragma message "Compiling for non Windows environment"
 #include <unistd.h>  // Unix-specific library for sleep (Linux, macOS)
 #define SLEEP(x) sleep(x)  // Unix sleep takes seconds
 #endif
@@ -66,6 +106,9 @@ int storia = 0;
 //int giorno = 1;
 
 int main(void) {
+    #ifdef _WIN32
+        impostaTerminaleUTF8();  // Imposta la codifica su UTF-8 su Windows
+    #endif
     int n, risposta = 0, quanteFrasiIntro, quanteFrasiResto;
     float totale;
     char temp;
@@ -148,7 +191,7 @@ int main(void) {
     // printf("%d ", quanteFrasiIntro);
     fclose(fp_frasiRead);
     printf("Premi invio per iniziare: ");
-    scanf("%c", &temp);
+    getchar();
     clearScreen();
 
     while (risposta != -1){
@@ -167,7 +210,10 @@ int main(void) {
         totale = scegliProdotti(n, listaProdotti, count);
         risposta = verifica(totale, listaProdotti, count, quanteFrasiResto, listaFrasiResto);
     }
-
+    #if defined(_WIN32) || defined(_WIN64)
+        FreeConsole();
+    #endif
+    fflush(stdout);
     free(listaProdotti); // libera la memoria allocata
     free(listaFrasi); //libera la lista delle frasi
     free(listaFrasiResto);
@@ -227,11 +273,13 @@ float scegliProdotti(int n, prodotto listaProdotti[], int count){
         printf("Errore di allocazione memoria nella scelta dei prodotti.\n");
         return 1; // Uscita con errore
     }
-    for(int i = 0; i< n; i++){
-        arrayEstratto[i].index = 999;//Inizializzo con un numero improbabile, poichè a 0 non posso siccome è un id di un prodotto.
+    for(int i = 0; i < n; i++) {
+        arrayEstratto[i].count = 0;
     }
+
     srand(time(NULL));
-    for(int i = 0; i<n; i++) {//while i<n
+    int i = 0;
+    while(i<n) {//while i<n
         int prod = rand() % (count);
         for (int j = 0; j < n; j++) {
             if (arrayEstratto[j].index == prod && arrayEstratto[j].count > 1) {
@@ -249,6 +297,7 @@ float scegliProdotti(int n, prodotto listaProdotti[], int count){
         totale += listaProdotti[prod].prezzo;
         arrayEstratto[i].index = prod;
         arrayEstratto[i].count += 1;
+        i++;
     }
         //mi genera un numero che sta a indicare uno dei prodotti della lista
     free(arrayEstratto);
@@ -492,7 +541,7 @@ void restoFunc(float totale, int quanteFrasiResto, char **listaFrasiResto) {
         //Giusto
         printf("\033[32m");//Set printf to green
         printf("Ottimo! Ci hai preso\n");
-        printf("\033[0m");
+        printf("\033[0m");//Torna allo standard
         if(animazioni){
             sleep_ms(800);
         }

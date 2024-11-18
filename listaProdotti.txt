@@ -1,5 +1,7 @@
 Qui sono tutti i prodotti che sono in vendita,
 ne puoi aggiungere quanti vuoi ma l'importante è che sia uno per riga.
+Per modificare le opzioni del programma basta modificare i valori nella sezione Opzioni.
+Nell'opzione "almeno un biglietto per ordine" 0 indica no, 1 sì (not available yet).
 
 //Inizio dizionario
 Intero:8
@@ -8,4 +10,13 @@ Coca-cola:3.5
 Birra media:3.5
 Goleador:0.2
 Birra grande:4.5
-//fine
+Libro di Vannacci:10
+Pop corn:2.5
+//fine dizionario
+//Inizio opzioni
+-Almeno un biglietto per ordine:0
+-Numero massimo di item per ogni ordine:5
+-Animazioni:1
+-Resto:1
+-Storia:0
+//fine opzioni
